@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DragonCP - Manual Sync Script by Dragon DB v2.0
+# DragonCP - Manual Sync Script by Dragon DB v2.2
 # This script facilitates the transfer of media files from a Remote VM to a local machine.
 # It allows users to:
 # 1. List and select media types (Movies, TV Shows, Anime).
@@ -60,10 +60,10 @@ transfer_folder() {
     echo "Syncing from: $DEBIAN_USER@$DEBIAN_IP:$source_path/"
     echo "Syncing to: $full_destination/"
     echo ">RSYNC<============================="
-    # rsync command with additional useful options (note: --dry-run is enabled)
-    rsync -avz \
+    # Optimized rsync command for large media files (MKV/MP4)
+    rsync -av \
     --progress \
-    -e "ssh -o StrictHostKeyChecking=no" \
+    -e "ssh -o StrictHostKeyChecking=no -o Compression=no -o Ciphers=chacha20-poly1305@openssh.com -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
     --delete \
     --backup \
     --backup-dir="$BACKUP_PATH" \
@@ -73,6 +73,20 @@ transfer_folder() {
     --exclude '*.log' \
     --stats \
     --human-readable \
+    --bwlimit=0 \
+    --block-size=65536 \
+    --no-compress \
+    --partial \
+    --partial-dir="$BACKUP_PATH/.rsync-partial" \
+    --timeout=300 \
+    --size-only \
+    --no-perms \
+    --no-owner \
+    --no-group \
+    --no-checksum \
+    --whole-file \
+    --preallocate \
+    --no-motd \
     "$DEBIAN_USER@$DEBIAN_IP:$source_path/" "$full_destination/"
     echo ">==================================="
     
@@ -124,7 +138,7 @@ sync_single_episode() {
 }
 
 while true; do
-    echo "DragonCP v2.0"
+    echo "DragonCP v2.2"
     echo "Select media type to list:"
     echo "1. Movies"
     echo "2. TV Shows"
