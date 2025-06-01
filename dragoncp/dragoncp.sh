@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DragonCP - Manual Sync Script by Dragon DB v2.2
+# DragonCP - Manual Sync Script by Dragon DB v2.5
 # This script facilitates the transfer of media files from a Remote VM to a local machine.
 # It allows users to:
 # 1. List and select media types (Movies, TV Shows, Anime).
@@ -138,7 +138,7 @@ sync_single_episode() {
 }
 
 while true; do
-    echo "DragonCP v2.2"
+    echo "DragonCP v2.5"
     echo "Select media type to list:"
     echo "1. Movies"
     echo "2. TV Shows"
@@ -237,8 +237,9 @@ while true; do
                 echo "Select sync option:"
                 echo "1. Sync entire season folder"
                 echo "2. Manual episode sync"
-                echo "3. Go back"
-                read -p "Enter your choice [1-3]: " sync_choice
+                echo "3. Download single episode"
+                echo "4. Go back"
+                read -p "Enter your choice [1-4]: " sync_choice
                 
                 case $sync_choice in
                     1)
@@ -316,6 +317,57 @@ while true; do
                         done
                         ;;
                     3)
+                        # Download single episode directly
+                        echo "Listing remote episodes..."
+                        remote_episodes=$(list_remote_files "$remote_full_path")
+                        if [ -z "$remote_episodes" ]; then
+                            echo "No remote episodes found or failed to connect to server."
+                            continue
+                        fi
+                        
+                        echo "$remote_episodes" | nl -n ln
+                        echo -e "\nSelect episode to download:"
+                        echo "Enter episode number"
+                        echo "Enter 'q' to go back to sync menu"
+                        read -p "Your choice: " episode_choice
+                        
+                        if [ "$episode_choice" == "q" ]; then
+                            continue
+                        fi
+                        
+                        selected_episode=$(echo "$remote_episodes" | sed -n "${episode_choice}p")
+                        if [ -z "$selected_episode" ]; then
+                            echo "Invalid episode selection, please try again."
+                            continue
+                        fi
+                        
+                        # Create season directory if it doesn't exist
+                        local_season_path="$local_series_dest/$selected_season"
+                        if [ ! -d "$local_season_path" ]; then
+                            echo "Creating directory: $local_season_path"
+                            mkdir -p "$local_season_path"
+                        fi
+                        
+                        # Transfer the episode directly
+                        echo "Downloading episode: $selected_episode"
+                        echo "From: $remote_full_path"
+                        echo "To: $local_season_path"
+                        echo ">RSYNC<============================="
+                        rsync -avz \
+                        --progress \
+                        -e "ssh -o StrictHostKeyChecking=no" \
+                        "$DEBIAN_USER@$DEBIAN_IP:$remote_full_path/$selected_episode" "$local_season_path/"
+                        echo ">==================================="
+                        
+                        status=$?
+                        if [ $status -eq 0 ]; then
+                            echo "Episode download completed successfully!"
+                            echo "File saved to: $local_season_path/$selected_episode"
+                        else
+                            echo "Episode download failed with status: $status"
+                        fi
+                        ;;
+                    4)
                         break
                         ;;
                     *)
